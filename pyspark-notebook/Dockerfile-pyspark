@@ -96,17 +96,28 @@ RUN mkdir -p /container/bin && \
 ENTRYPOINT ["/container/bin/scrape_libs.sh"]
 CMD ["/bin/bash"]
 
-ENV HOME=/run/determined/workdir
-RUN python -m pip install findspark
+RUN python -m pip install findspark azure-identity azure-keyvault-keys azure-keyvault-certificates azure-keyvault-secrets
 RUN conda install -c conda-forge pyspark
-
-RUN wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/24.02.0/rapids-4-spark_2.12-24.02.0.jar
-
 
 RUN wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/com/azure/azure-core/1.47.0/azure-core-1.47.0.jar | \
 	wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/com/azure/azure-identity/1.11.4/azure-identity-1.11.4.jar | \
 	wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/com/azure/azure-storage-blob/12.25.3/azure-storage-blob-12.25.3.jar | \
 	wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-azure/3.4.0/hadoop-azure-3.4.0.jar | \
-	wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.4.0/hadoop-common-3.4.0.jar
-
+	wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.4.0/hadoop-common-3.4.0.jar | \
+	wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/24.02.0/rapids-4-spark_2.12-24.02.0.jar | \
+	wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/io/delta/delta-spark_2.13/3.2.0/delta-spark_2.13-3.2.0.jar | \
+    wget -P $SPARK_HOME/jars https://repo1.maven.org/maven2/io/delta/delta-core_2.12/2.4.0/delta-core_2.12-2.4.0.jar
 RUN rm -r /tmp/*
+
+# Install Azure CLI
+RUN apt-get update && apt-get -y upgrade && \
+    apt-get -f -y install apt-transport-https lsb-release gnupg && \
+    curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.asc.gpg && \
+    CLI_REPO=$(lsb_release -cs) && \
+    echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ ${CLI_REPO} main" \
+    > /etc/apt/sources.list.d/azure-cli.list && \
+    apt-get update && \
+    apt-get install -y azure-cli && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV HOME=/run/determined/workdir
